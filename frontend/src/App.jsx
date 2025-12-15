@@ -2,6 +2,10 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import SuperLogin from "./Auth/SuperLogin";
 import SuperDashboard from "./SuperAdmin/SuperDashboard";
 import SuperAuthGuard from "./Auth/SuperAuthGuard";
+import Notification from "./SuperAdmin/Notification";
+import AllEmployeeList from "./SuperAdmin/AllEmployeeList";
+import LeaveRequest from "./SuperAdmin/LeaveRequest";
+import AdminProfile from "./SuperAdmin/AdminProfile";
 
 export default function App() {
   return (
@@ -22,6 +26,29 @@ export default function App() {
           </SuperAuthGuard>
         }
       />
+
+      <Route path="/super/dashboard/notification"
+       element={<SuperAuthGuard>
+            <Notification />
+          </SuperAuthGuard>} />
+
+      <Route path="/super/dashboard/employees"
+       element={<SuperAuthGuard>
+            <AllEmployeeList />
+          </SuperAuthGuard>} />
+
+        <Route path="/super/dashboard/leaves"
+       element={<SuperAuthGuard>
+            <LeaveRequest />
+          </SuperAuthGuard>} />
+
+           <Route path="/super/dashboard/profile"
+       element={<SuperAuthGuard>
+            <AdminProfile />
+          </SuperAuthGuard>} />
     </Routes>
+
+    
+    
   );
 }

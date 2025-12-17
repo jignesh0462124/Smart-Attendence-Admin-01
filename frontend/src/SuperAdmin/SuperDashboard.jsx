@@ -3,46 +3,24 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { 
   LayoutDashboard, 
   Users, 
+  UserCircle, 
+  LogOut, 
+  Calendar, 
   CheckCircle, 
   Clock, 
   XCircle, 
-  Search,
-  Calendar,
-  UserCircle,
-  BriefcaseMedical, // Added for Leaves/StatCard
-  LogOut // Kept for handleLogout function
+  Search 
 } from "lucide-react";
 
-import SuperAuthGuard from "../Auth/SuperAuthGuard";
-import Sidebar from "../components/Sidebar"; // NEW: Import the reusable Sidebar
 
+import Sidebar from "../components/Sidebar"; // NEW: Import the reusable Sidebar
+import SuperAuthGuard from "../Auth/SuperAuthGuard";
 // Assuming these helper functions exist in your 'super.js' file
 import {
   getSuperAdminProfile,
   fetchAttendanceByMonth,
   superLogout,
 } from "./super";
-
-// =================================================================
-// NOTE: I am keeping StatCard here as a sub-component of SuperDashboard
-// since the prompt did not request a separate file for StatCard.
-// =================================================================
-
-function StatCard({ title, value, icon, color }) {
-  return (
-    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
-      <div className="flex items-center justify-between mb-4">
-        <div className={`p-3 rounded-lg ${color}`}>
-          {icon}
-        </div>
-      </div>
-      <div>
-        <h3 className="text-3xl font-bold text-slate-800">{value}</h3>
-        <p className="text-sm font-medium text-slate-500 mt-1">{title}</p>
-      </div>
-    </div>
-  );
-}
 
 export default function SuperDashboard() {
   const navigate = useNavigate();
@@ -80,34 +58,22 @@ export default function SuperDashboard() {
       const month = now.getMonth() + 1;
 
       const records = await fetchAttendanceByMonth(year, month);
-      
-      // Mock Data (to match UI image content)
-      const today = new Date().toISOString().split("T")[0];
-      const todayRecords = [
-          { id: 1, date: today, full_name: "John Doe", email: "john@portal.com", check_in_time: "09:02:00", check_out_time: null, status: "Late" },
-          { id: 2, date: today, full_name: "Sarah Smith", email: "sarah@portal.com", check_in_time: "08:55:00", check_out_time: null, status: "Present" },
-          { id: 3, date: today, full_name: "Emily Davis", email: "emily@portal.com", check_in_time: "09:00:00", check_out_time: "17:30:00", status: "Present" },
-      ];
-
-      setAttendanceLogs(todayRecords); 
+      setAttendanceLogs(records || []);
 
       // 3️⃣ Calculate Today's Stats
-      const actualTodayRecords = (records || []).filter((r) => r.date === today); // Use actual records for counts
-      
-      // If actual records are empty, use derived counts from the mock data for UI display
-      const derivedTodayRecords = actualTodayRecords.length > 0 ? actualTodayRecords : todayRecords; 
+      const today = new Date().toISOString().split("T")[0];
+      const todayRecords = (records || []).filter((r) => r.date === today);
 
       setStats({
-        totalRecords: derivedTodayRecords.length, 
-        presentToday: derivedTodayRecords.filter((r) => r.status === "Present").length,
-        lateToday: derivedTodayRecords.filter((r) => r.status === "Late").length,
-        absentToday: derivedTodayRecords.filter((r) => r.status === "Absent").length,
+        totalRecords: todayRecords.length, // Changed to show TODAY'S total count
+        presentToday: todayRecords.filter((r) => r.status === "Present").length,
+        lateToday: todayRecords.filter((r) => r.status === "Late").length,
+        absentToday: todayRecords.filter((r) => r.status === "Absent").length,
       });
 
     } catch (err) {
       console.error("Dashboard Load Error:", err);
-      // Fallback and redirect kept from original code
-      // navigate("/login"); 
+      navigate("/login"); // Redirect if unauthorized
     } finally {
       setLoading(false);
     }
@@ -147,8 +113,8 @@ export default function SuperDashboard() {
     <SuperAuthGuard>
       <div className="min-h-screen bg-slate-50 flex font-sans">
         
-        {/* === SIDEBAR (Replaced with Component) === */}
-        <Sidebar handleLogout={handleLogout} />
+        {/* SIDEBAR */}
+      <Sidebar handleLogout={handleLogout} />
 
         {/* MAIN CONTENT */}
         <main className="flex-1 ml-64 p-8 overflow-y-auto">
@@ -171,25 +137,25 @@ export default function SuperDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <StatCard 
               title="Today's Check-ins" 
-              value={loading ? '-' : stats.totalRecords} 
+              value={stats.totalRecords} 
               icon={<Users className="text-blue-600" size={24} />}
               color="bg-blue-50"
             />
             <StatCard 
               title="Present" 
-              value={loading ? '-' : stats.presentToday} 
+              value={stats.presentToday} 
               icon={<CheckCircle className="text-green-600" size={24} />}
               color="bg-green-50"
             />
             <StatCard 
               title="Late" 
-              value={loading ? '-' : stats.lateToday} 
+              value={stats.lateToday} 
               icon={<Clock className="text-yellow-600" size={24} />}
               color="bg-yellow-50"
             />
             <StatCard 
               title="Absent" 
-              value={loading ? '-' : stats.absentToday} 
+              value={stats.absentToday} 
               icon={<XCircle className="text-red-600" size={24} />}
               color="bg-red-50"
             />
@@ -234,14 +200,15 @@ export default function SuperDashboard() {
                     <tr>
                       <td colSpan="4" className="px-6 py-12 text-center text-slate-400">
                         <div className="flex flex-col items-center justify-center gap-2">
-                            <Calendar className="w-10 h-10 text-slate-300"/>
-                            <p>No attendance records found for today.</p>
+                           <Calendar className="w-10 h-10 text-slate-300"/>
+                           <p>No attendance records found for today.</p>
                         </div>
                       </td>
                     </tr>
                   ) : (
                     // DATA ROWS
                     attendanceLogs
+                      .filter(a => a.date === new Date().toISOString().split("T")[0])
                       .map((log) => (
                       <tr key={log.id} className="hover:bg-slate-50 transition-colors">
                         <td className="px-6 py-4">
@@ -276,5 +243,39 @@ export default function SuperDashboard() {
         </main>
       </div>
     </SuperAuthGuard>
+  );
+}
+
+/* ================= SUB-COMPONENTS ================= */
+
+function SidebarItem({ to, icon, label, active }) {
+  return (
+    <Link 
+      to={to} 
+      className={`flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-all ${
+        active 
+          ? "bg-indigo-50 text-indigo-700 shadow-sm" 
+          : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+      }`}
+    >
+      {icon}
+      {label}
+    </Link>
+  );
+}
+
+function StatCard({ title, value, icon, color }) {
+  return (
+    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+      <div className="flex items-center justify-between mb-4">
+        <div className={`p-3 rounded-lg ${color}`}>
+          {icon}
+        </div>
+      </div>
+      <div>
+        <h3 className="text-3xl font-bold text-slate-800">{value}</h3>
+        <p className="text-sm font-medium text-slate-500 mt-1">{title}</p>
+      </div>
+    </div>
   );
 }

@@ -32,17 +32,17 @@ export default function App() {
             <Notification />
           </SuperAuthGuard>} />
 
-      <Route path="/super/dashboard/employees"
+      <Route path="/super/employees"
        element={<SuperAuthGuard>
             <AllEmployeeList />
           </SuperAuthGuard>} />
 
-        <Route path="/super/dashboard/leaves"
+        <Route path="/super/leaves"
        element={<SuperAuthGuard>
             <LeaveRequest />
           </SuperAuthGuard>} />
 
-           <Route path="/super/dashboard/profile"
+           <Route path="/super/profile"
        element={<SuperAuthGuard>
             <AdminProfile />
           </SuperAuthGuard>} />

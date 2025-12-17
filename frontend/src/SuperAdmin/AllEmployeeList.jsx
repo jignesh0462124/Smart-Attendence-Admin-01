@@ -3,6 +3,9 @@ import { useEffect, useState } from "react";
 import { supabase } from "../../supabase/supabase";
 // Adjust path to your AuthGuard
 import SuperAuthGuard from "../Auth/SuperAuthGuard";
+// NEW: Import the reusable Sidebar
+import Sidebar from "../components/Sidebar"; 
+
 
 /**
  * Renders the All Employees List page for the HR Admin portal in a strict Light Theme.
@@ -119,67 +122,8 @@ export default function EmployeeList() {
         <input className="peer hidden" id="sidebar-toggle" type="checkbox" />
         <label aria-hidden="true" className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-20 hidden peer-checked:block md:hidden transition-opacity" htmlFor="sidebar-toggle"></label>
 
-        {/* --- SIDEBAR --- */}
-        <aside className="fixed inset-y-0 left-0 z-30 w-64 bg-white border-r border-slate-200 flex flex-col transition-transform duration-300 transform -translate-x-full peer-checked:translate-x-0 md:translate-x-0 md:static md:flex shadow-[4px_0_24px_-12px_rgba(0,0,0,0.1)]">
-          
-          {/* Sidebar Header/Logo */}
-          <div className="h-16 flex items-center px-6 border-b border-slate-100 shrink-0">
-            <div className="flex items-center gap-2 text-[#137fec] font-bold text-xl tracking-tight">
-              <span className="material-symbols-outlined filled">hexagon</span>
-              HR Admin
-            </div>
-          </div>
-
-          {/* Navigation */}
-          <nav className="flex-1 overflow-y-auto py-4 flex flex-col gap-1 px-3">
-            <div className="px-3 mb-2">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Main</p>
-            </div>
-            {/* Dashboard Link */}
-            <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-blue-50 hover:text-[#137fec] transition-colors group" href="#">
-              <span className="material-symbols-outlined text-slate-400 group-hover:text-[#137fec] transition-colors">dashboard</span>
-              <span className="text-sm font-medium">Dashboard</span>
-            </a>
-            {/* Employees Link (Active) */}
-            <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-[#137fec]/10 text-[#137fec] group border-l-4 border-[#137fec] shadow-sm" href="#">
-              <span className="material-symbols-outlined fill-1">group</span>
-              <span className="text-sm font-semibold">Employees</span>
-            </a>
-            {/* Other Nav Links */}
-            <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-blue-50 hover:text-[#137fec] transition-colors group" href="#">
-              <span className="material-symbols-outlined text-slate-400 group-hover:text-[#137fec] transition-colors">calendar_month</span>
-              <span className="text-sm font-medium">Attendance</span>
-            </a>
-            <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-blue-50 hover:text-[#137fec] transition-colors group" href="#">
-              <span className="material-symbols-outlined text-slate-400 group-hover:text-[#137fec] transition-colors">assignment</span>
-              <span className="text-sm font-medium">Leave Requests</span>
-            </a>
-            
-            {/* System Section */}
-            <div className="px-3 mt-6 mb-2">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">System</p>
-            </div>
-            <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-blue-50 hover:text-[#137fec] transition-colors group" href="#">
-              <span className="material-symbols-outlined text-slate-400 group-hover:text-[#137fec] transition-colors">settings</span>
-              <span className="text-sm font-medium">Settings</span>
-            </a>
-            <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-red-50 hover:text-red-600 transition-colors group" href="#">
-              <span className="material-symbols-outlined text-slate-400 group-hover:text-red-500 transition-colors">logout</span>
-              <span className="text-sm font-medium">Logout</span>
-            </a>
-          </nav>
-          
-          {/* User Profile */}
-          <div className="p-4 border-t border-slate-100 bg-slate-50/50 shrink-0">
-            <div className="flex items-center gap-3">
-              <img alt="Admin user avatar" className="h-9 w-9 rounded-full object-cover border border-slate-200 ring-2 ring-white shadow-sm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBkBj1dKTKjTO5eqPsXYyb3FAT3QY4QokWXoqFuOJJqNqfBJz4gdTyBmS7KNRF4b4IbrYu8sLF33o3Ur_zvMv0Uf0CK6VTWWxHXPruV4OWKMiJoeo-5KiJ48ClrhpQSM7fWf-FKLMU9_UbyyoDaM5f3JZDrp0uzy3WniSSKIxkps2Doww24baOhXtMkHNGM31qSmFdvAmdpNFv5dSvJWflIcjgyUpGJDEwik4TvwVcPAYPwIBnRl2FPiPfaikqIMBSwNDdXaWUbrXU" />
-              <div className="flex flex-col">
-                <p className="text-sm font-semibold text-slate-700">Admin User</p>
-                <p className="text-xs text-slate-500">admin@company.com</p>
-              </div>
-            </div>
-          </div>
-        </aside>
+        {/* --- SIDEBAR (Modular Component) --- */}
+        <Sidebar /> 
 
         {/* --- MAIN CONTENT AREA --- */}
         <main className="flex-1 flex flex-col h-full overflow-hidden bg-background-light relative">

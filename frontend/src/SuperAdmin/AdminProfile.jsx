@@ -3,12 +3,21 @@ import { useEffect, useState } from "react";
 import { supabase } from "../../supabase/supabase";
 // Adjust path to your AuthGuard
 import SuperAuthGuard from "../Auth/SuperAuthGuard";
+// Import the necessary component for routing (used for handleLogout logic)
+import { useNavigate } from "react-router-dom"; 
+
+// Assume superLogout function is available globally or imported from "../super"
+const superLogout = () => { /* Mock logout logic */ console.log("Logging out..."); };
+
+// NEW: Import the reusable Sidebar
+import Sidebar from "../components/Sidebar"; 
 
 /**
  * Renders the Admin Profile configuration page.
- * NOTE: Data fetching is mocked/simplified as this page is mainly static form presentation.
  */
 export default function AdminProfile() {
+  const navigate = useNavigate();
+
   const [profileData, setProfileData] = useState({
     firstName: "Sarah",
     lastName: "Jenkins",
@@ -23,10 +32,10 @@ export default function AdminProfile() {
     role: "Senior HR Administrator",
     avatarUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuCGX8oFF4BtJM7lCsJNiRGTlwgJQFkLVf94GCQc01mRr0JAeSitSFpQSxKBGR-D74fJb5AZnnr_jlUACSuWIchEXRcfSlK389HGjX2kRHiR-QDt5XB4dNVKItglSLNrUKcn_ZnWrztyUEdiBJL6Qqxg1fIlqkRzd5N08F-lYB7hTDDLUPu7sLz9mYeZPC1-Ek_XurOom-B6foM4oOEPmZ7oDx5qatrwNTHzFBYwsFjKmPGbiAm8YlmDiPnoKaiCllNkUeJ3q1fYf_c",
   });
-  const [loading, setLoading] = useState(false); // Set to false since data is mocked
-  const [isEditing, setIsEditing] = useState(false); // State to handle form changes
+  const [loading, setLoading] = useState(false); 
+  const [isEditing, setIsEditing] = useState(false); 
 
-  // --- Mock Data/Form Handlers ---
+  // --- Form Handlers ---
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -37,21 +46,7 @@ export default function AdminProfile() {
   const handleSave = async (e) => {
     e.preventDefault();
     setLoading(true);
-    // In a real application, you would perform a Supabase update here:
-    /*
-    const { error } = await supabase
-      .from('profiles')
-      .update({ ...profileData })
-      .eq('user_id', supabase.auth.user.id);
-
-    if (error) {
-      console.error("Save Error:", error);
-      alert("Failed to save changes.");
-    } else {
-      setIsEditing(false);
-      alert("Profile updated successfully!");
-    }
-    */
+    // [Supabase update mock here]
     setTimeout(() => {
         setLoading(false);
         setIsEditing(false);
@@ -61,10 +56,19 @@ export default function AdminProfile() {
   };
 
   const handleCancel = () => {
-    // Reload/re-fetch original data here if necessary. For mock, just reset isEditing.
+    // In a real scenario, you'd reset profileData to the original fetch state.
     setIsEditing(false);
   };
   
+  // --- Logout Handler ---
+  const handleLogout = async () => {
+    const confirmLogout = window.confirm("Are you sure you want to log out?");
+    if (confirmLogout) {
+      await superLogout();
+      navigate("/login"); 
+    }
+  };
+
   // --- Render Logic ---
   return (
     <SuperAuthGuard>
@@ -86,16 +90,16 @@ export default function AdminProfile() {
       `}} />
 
       {/* Main Layout Container (Light Theme only) */}
-      <div className="flex min-h-screen w-full flex-col bg-background-light font-display text-[#111418] antialiased">
+      <div className="flex min-h-screen w-full flex-col bg-[#f6f7f8] font-display text-[#111418] antialiased">
         
         {/* --- HEADER --- */}
         <header className="sticky top-0 z-50 flex items-center justify-between whitespace-nowrap border-b border-slate-200 bg-white px-4 md:px-10 py-3">
           <div className="flex items-center gap-4">
-            <button className="flex items-center justify-center p-1 text-slate-500 hover:text-slate-700 transition-colors">
+            <button className="flex items-center justify-center p-1 text-slate-500 hover:text-slate-700 transition-colors lg:hidden">
               <span className="material-symbols-outlined">menu</span>
             </button>
             <div className="size-8 text-[#137fec]">
-              {/* Logo SVG (Replaced with standard JSX for clarity if SVG is complex) */}
+              {/* Logo SVG */}
               <svg fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
                 <path d="M42.4379 44C42.4379 44 36.0744 33.9038 41.1692 24C46.8624 12.9336 42.2078 4 42.2078 4L7.01134 4C7.01134 4 11.6577 12.932 5.96912 23.9969C0.876273 33.9029 7.27094 44 7.27094 44L42.4379 44Z" fill="currentColor"></path>
               </svg>
@@ -126,50 +130,12 @@ export default function AdminProfile() {
         {/* --- MAIN BODY LAYOUT --- */}
         <div className="flex flex-1 overflow-hidden">
           
-          {/* --- SIDEBAR --- */}
-          <aside className="hidden lg:flex w-72 flex-col border-r border-slate-200 bg-white overflow-y-auto">
-            <div className="flex flex-col gap-4 p-4">
-              <div className="px-3 py-2">
-                <h1 className="text-[#111418] text-base font-medium">HR Portal</h1>
-                <p className="text-slate-500 text-sm">Admin Console</p>
-              </div>
-              <nav className="flex flex-col gap-1">
-                <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#111418] hover:bg-slate-50 transition-colors" href="#">
-                  <span className="material-symbols-outlined text-slate-500">dashboard</span>
-                  <span className="text-sm font-medium">Dashboard</span>
-                </a>
-                <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#111418] hover:bg-slate-50 transition-colors" href="#">
-                  <span className="material-symbols-outlined text-slate-500">group</span>
-                  <span className="text-sm font-medium">Employees</span>
-                </a>
-                <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#111418] hover:bg-slate-50 transition-colors" href="#">
-                  <span className="material-symbols-outlined text-slate-500">schedule</span>
-                  <span className="text-sm font-medium">Attendance</span>
-                </a>
-                <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#111418] hover:bg-slate-50 transition-colors" href="#">
-                  <span className="material-symbols-outlined text-slate-500">event_busy</span>
-                  <span className="text-sm font-medium">Leaves</span>
-                </a>
-                {/* Active Link: Profile */}
-                <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-[#137fec]/10 text-[#137fec]" href="#">
-                  <span className="material-symbols-outlined fill-1">person</span>
-                  <span className="text-sm font-medium">Profile</span>
-                </a>
-                <div className="my-2 border-t border-slate-200"></div>
-                <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#111418] hover:bg-slate-50 transition-colors" href="#">
-                  <span className="material-symbols-outlined text-slate-500">settings</span>
-                  <span className="text-sm font-medium">Settings</span>
-                </a>
-                <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#111418] hover:bg-slate-50 transition-colors" href="#">
-                  <span className="material-symbols-outlined text-slate-500">logout</span>
-                  <span className="text-sm font-medium">Logout</span>
-                </a>
-              </nav>
-            </div>
-          </aside>
-
+          {/* --- SIDEBAR (Modular Component) --- */}
+          {/* This replaces the old <aside> block */}
+          <Sidebar handleLogout={handleLogout} />
+          
           {/* --- MAIN CONTENT (PROFILE FORM) --- */}
-          <main className="flex-1 bg-background-light p-4 md:p-8 lg:px-12 overflow-y-auto">
+          <main className="flex-1 bg-[#f6f7f8] p-4 md:p-8 lg:px-12 overflow-y-auto">
             <form onSubmit={handleSave} className="mx-auto max-w-5xl flex flex-col gap-6">
               
               {/* Page Title */}

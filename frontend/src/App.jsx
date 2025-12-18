@@ -6,7 +6,7 @@ import Notification from "./SuperAdmin/Notification";
 import AllEmployeeList from "./SuperAdmin/AllEmployeeList";
 import LeaveRequest from "./SuperAdmin/LeaveRequest";
 import AdminProfile from "./SuperAdmin/AdminProfile";
-
+import Attendance from "./SuperAdmin/Attendance";
 export default function App() {
   return (
     <Routes>
@@ -46,6 +46,9 @@ export default function App() {
        element={<SuperAuthGuard>
             <AdminProfile />
           </SuperAuthGuard>} />
+
+        {/* Attendance route (added so Sidebar link /super/attendance shows the Attendance page) */}
+        <Route path="/super/attendance" element={<SuperAuthGuard><Attendance /></SuperAuthGuard>} />
     </Routes>
 
     

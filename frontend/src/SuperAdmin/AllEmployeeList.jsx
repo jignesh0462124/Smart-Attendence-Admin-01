@@ -1,16 +1,25 @@
 import { useEffect, useState } from "react";
-// Adjust path to your supabase client
-import { supabase } from "../../supabase/supabase";
+import { Link, useNavigate } from "react-router-dom";
 // Adjust path to your AuthGuard
 import SuperAuthGuard from "../Auth/SuperAuthGuard";
+import { fetchAllEmployees, superLogout } from "./super";
+import AddEmployeeModal from "./AddEmployeeModal";
 
 /**
  * Renders the All Employees List page for the HR Admin portal in a strict Light Theme.
  * Fetches employee list and summary statistics from Supabase.
  */
 export default function EmployeeList() {
+  const navigate = useNavigate();
+  const handleLogout = async () => {
+    if (window.confirm("Are you sure you want to log out?")) {
+      await superLogout();
+      navigate("/super/login");
+    }
+  };
   const [loading, setLoading] = useState(true);
   const [employees, setEmployees] = useState([]);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false); // Modal State
   const [stats, setStats] = useState({
     totalEmployees: 0,
     active: 0,
@@ -31,7 +40,7 @@ export default function EmployeeList() {
       default: return "bg-slate-400";
     }
   };
-  
+
   // Function to map status string to Tailwind badge classes
   const getStatusBadge = (status) => {
     const s = status?.toLowerCase();
@@ -48,7 +57,7 @@ export default function EmployeeList() {
     return "bg-green-400";
   };
 
-  // --- Data Fetching (Kept same as previous response) ---
+  // --- Data Fetching ---
 
   useEffect(() => {
     fetchEmployeeData();
@@ -57,38 +66,58 @@ export default function EmployeeList() {
   async function fetchEmployeeData() {
     try {
       setLoading(true);
-      
-      // Fetch data... (mocked for this example)
-      const mockTotal = 142;
-      const mockActive = 128;
-      const mockOnLeave = 12;
-      const mockNew = 5;
+
+      // 1. Fetch all profiles from Supabase using centralized helper
+      const data = await fetchAllEmployees();
+
+      // 2. Compute Stats
+      const totalEmployees = data.length;
+      // Since we don't have a specific 'status' column in the schema yet, 
+      // we'll assume everyone is 'Active' for now, or you could add logic 
+      // to check their last attendance date.
+      const active = data.length;
+      const onLeave = 0; // TODO: Fetch from 'leaves' table where status='Approved' and date=today
+
+      // Calculate new this month
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const newThisMonth = data.filter(p => new Date(p.created_at) >= startOfMonth).length;
 
       setStats({
-        totalEmployees: mockTotal,
-        active: mockActive,
-        onLeave: mockOnLeave,
-        newThisMonth: mockNew,
+        totalEmployees,
+        active,
+        onLeave,
+        newThisMonth,
       });
 
-      // Default employee data matching the screenshot/HTML structure
-      const defaultEmployees = [
-        { id: 1, full_name: "Sarah Jenkins", email: "sarah.j@company.com", employee_code: "#EMP-0042", role: "Senior Designer", sub_role: "Product Team", department: "Marketing", status: "Active", avatar_url: "https://lh3.googleusercontent.com/aida-public/AB6AXuBYFpOZwyiWGzKnY6Ez8NFuBnf4vs_aTa5KmaMMS61Q_ZvyVy_uqmEDLHG3jcMDNSJ0tXGuIzvN4u_eSeocQSO5ELL1VBazpyLJuK_UlR2mVpB-engzUKeVHsWafNMvtv7KgXGd-JmxU4o8MKdbIv967GbtYVBCSin0k17XHNhxEoMo7TUAgp6zBv0gnLo9UkEGUGq_oYgr5U7t_xpCLV3YRSJg8DGiO_SgAjhbvq0oBjjTWdVF265DS-JuAT-Znt3ZMZb0E2ORSH4" },
-        { id: 2, full_name: "Michael Chen", email: "m.chen@company.com", employee_code: "#EMP-0045", role: "Full Stack Dev", sub_role: "Engineering", department: "Engineering", status: "Active", avatar_url: "https://lh3.googleusercontent.com/aida-public/AB6AXuBwCb7Oxc0kNHgcsFcslTtwHebX9IQR0Y4SzVpfC17tYMaK9nPSraD1tiomeMzmsqkFt0venXT08W3ZSLL26RvgytZ3rFpiUVeOKIwrLpmQ4LU04Oeajvred0IbJqLWlHQJ5i9POq-qwJxNzR9K2TVwho9t2qgZQ0HqnSWioKXTafK3Iuzh1DAbNw26TRQMRts2oOeBCdlj3oEGS9kBNOuFmccb-iYcBE76S-HraaHRSYi1Xv4zbYxj3F7v4_Qpbnq8dctEDxq2J-s" },
-        { id: 3, full_name: "Emily Davis", email: "emily.d@company.com", employee_code: "#EMP-0051", role: "HR Specialist", sub_role: "People Ops", department: "Human Resources", status: "On Leave", avatar_url: "https://lh3.googleusercontent.com/aida-public/AB6AXuBa-Yoyfk4AQ8hd1bYrMLwUzOUboV6jy23kVzSby9gD5KJkTvZfRjnKSOvoabOBZDnC_qOa4-YnAfbnwcRfkhs9pBjR5kZP7myzt8nN2oan4W8g1tk4mHFGc1fpvnoF6QNT4gSAAhRMfK6qfunSSKVBGdQTv57n2sMBr_iKYzX9lwsNF6DVEoV22F5WejdyHMOIySSpoElZ8g2q80_n7It9Y4454kHSBHRmYoiTKlALE03gpdrngn_a41W7T4Y1MZeh2sSV6XH8y_M" },
-        { id: 4, full_name: "David Wilson", email: "dwilson@company.com", employee_code: "#EMP-0058", role: "Product Manager", sub_role: "Product Team", department: "Product", status: "Active", avatar_url: "https://lh3.googleusercontent.com/aida-public/AB6AXuArUneT3n0dX0ftMPMd26jH0qBCtCRHOd6NSPfXI0E0W7oUetJ5fEUhzdlPEKVlxmx1EN3X_gmApHQ_dpvsdtwSwvjF_cjw_A2Y0jGFkZrLdUytRP2ojdBR4f78BVeZN6xTOlhJ2TDVnR4M2iMH7b7sO0rP_svSspWa1-zhvUVrdftGJFpiEsjNdX-dcgmu9fv7RYdfMfvw39Qkq_LeA5w8wkLLyQMLhbK2telXpUaTZy_KIjQ_BrvGgf8Ok_ygVEvSXRu1aR_hV_U" },
-        { id: 5, full_name: "James Rodriguez", email: "j.rod@company.com", employee_code: "#EMP-0063", role: "Frontend Dev", sub_role: "Engineering", department: "Engineering", status: "Inactive", avatar_url: "JR" },
-      ];
+      // 3. Map Supabase data to the UI format
+      const mappedEmployees = data.map(p => ({
+        id: p.id,
+        full_name: p.full_name || "N/A",
+        email: p.email || "N/A",
+        employee_code: "#EMP-" + (p.id ? p.id.substring(0, 4).toUpperCase() : "0000"), // Generate pseudo-ID or add column later
+        role: p.role || "Employee",
+        sub_role: "General", // Placeholder
+        department: "General", // Placeholder as 'department' is not in schema yet
+        status: "Active", // Placeholder
+        avatar_url: p.profile_image
+      }));
 
-      setEmployees(defaultEmployees);
+      setEmployees(mappedEmployees);
 
     } catch (err) {
       console.error("Error fetching employee data:", err);
-      setStats({ totalEmployees: 142, active: 128, onLeave: 12, newThisMonth: 5 });
+      // Fallback empty or alert
+      setEmployees([]);
     } finally {
       setLoading(false);
     }
   }
+
+  // Refresh list after adding
+  const handleUserAdded = () => {
+    fetchEmployeeData();
+  };
 
   // --- Render Logic ---
   return (
@@ -98,7 +127,8 @@ export default function EmployeeList() {
         2. Set background color variable (background-light: #f0f4f9).
         3. Remove dark mode scrollbar styling to ensure light-only appearance.
       */}
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         /* Custom scrollbar matching the original HTML */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
@@ -114,14 +144,14 @@ export default function EmployeeList() {
 
       {/* Main Layout Container: Removed dark: classes */}
       <div className="bg-background-light text-slate-900 h-screen flex overflow-hidden selection:bg-[#137fec]/20">
-        
+
         {/* Mobile Sidebar Toggle Input (Hidden) */}
         <input className="peer hidden" id="sidebar-toggle" type="checkbox" />
         <label aria-hidden="true" className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-20 hidden peer-checked:block md:hidden transition-opacity" htmlFor="sidebar-toggle"></label>
 
         {/* --- SIDEBAR --- */}
         <aside className="fixed inset-y-0 left-0 z-30 w-64 bg-white border-r border-slate-200 flex flex-col transition-transform duration-300 transform -translate-x-full peer-checked:translate-x-0 md:translate-x-0 md:static md:flex shadow-[4px_0_24px_-12px_rgba(0,0,0,0.1)]">
-          
+
           {/* Sidebar Header/Logo */}
           <div className="h-16 flex items-center px-6 border-b border-slate-100 shrink-0">
             <div className="flex items-center gap-2 text-[#137fec] font-bold text-xl tracking-tight">
@@ -136,39 +166,39 @@ export default function EmployeeList() {
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Main</p>
             </div>
             {/* Dashboard Link */}
-            <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-blue-50 hover:text-[#137fec] transition-colors group" href="#">
+            <Link className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-blue-50 hover:text-[#137fec] transition-colors group" to="/super/dashboard">
               <span className="material-symbols-outlined text-slate-400 group-hover:text-[#137fec] transition-colors">dashboard</span>
               <span className="text-sm font-medium">Dashboard</span>
-            </a>
+            </Link>
             {/* Employees Link (Active) */}
-            <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-[#137fec]/10 text-[#137fec] group border-l-4 border-[#137fec] shadow-sm" href="#">
+            <Link className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-[#137fec]/10 text-[#137fec] group border-l-4 border-[#137fec] shadow-sm" to="/super/dashboard/employees">
               <span className="material-symbols-outlined fill-1">group</span>
               <span className="text-sm font-semibold">Employees</span>
-            </a>
+            </Link>
             {/* Other Nav Links */}
-            <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-blue-50 hover:text-[#137fec] transition-colors group" href="#">
-              <span className="material-symbols-outlined text-slate-400 group-hover:text-[#137fec] transition-colors">calendar_month</span>
-              <span className="text-sm font-medium">Attendance</span>
-            </a>
-            <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-blue-50 hover:text-[#137fec] transition-colors group" href="#">
+            <Link className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-blue-50 hover:text-[#137fec] transition-colors group" to="/super/dashboard/leaves">
               <span className="material-symbols-outlined text-slate-400 group-hover:text-[#137fec] transition-colors">assignment</span>
               <span className="text-sm font-medium">Leave Requests</span>
-            </a>
-            
+            </Link>
+            <Link className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-blue-50 hover:text-[#137fec] transition-colors group" to="/super/dashboard/notification">
+              <span className="material-symbols-outlined text-slate-400 group-hover:text-[#137fec] transition-colors">notifications</span>
+              <span className="text-sm font-medium">Notifications</span>
+            </Link>
+
             {/* System Section */}
             <div className="px-3 mt-6 mb-2">
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">System</p>
             </div>
-            <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-blue-50 hover:text-[#137fec] transition-colors group" href="#">
-              <span className="material-symbols-outlined text-slate-400 group-hover:text-[#137fec] transition-colors">settings</span>
-              <span className="text-sm font-medium">Settings</span>
-            </a>
-            <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-red-50 hover:text-red-600 transition-colors group" href="#">
+            <Link className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-blue-50 hover:text-[#137fec] transition-colors group" to="/super/dashboard/profile">
+              <span className="material-symbols-outlined text-slate-400 group-hover:text-[#137fec] transition-colors">person</span>
+              <span className="text-sm font-medium">My Profile</span>
+            </Link>
+            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-red-50 hover:text-red-600 transition-colors group" onClick={handleLogout}>
               <span className="material-symbols-outlined text-slate-400 group-hover:text-red-500 transition-colors">logout</span>
               <span className="text-sm font-medium">Logout</span>
-            </a>
+            </button>
           </nav>
-          
+
           {/* User Profile */}
           <div className="p-4 border-t border-slate-100 bg-slate-50/50 shrink-0">
             <div className="flex items-center gap-3">
@@ -183,7 +213,7 @@ export default function EmployeeList() {
 
         {/* --- MAIN CONTENT AREA --- */}
         <main className="flex-1 flex flex-col h-full overflow-hidden bg-background-light relative">
-          
+
           {/* Top Header */}
           <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 lg:px-8 z-20 shrink-0">
             <div className="flex items-center gap-4">
@@ -208,7 +238,7 @@ export default function EmployeeList() {
                 <span className="text-[#137fec] font-semibold bg-blue-50 px-2 py-0.5 rounded text-xs uppercase tracking-wide">List</span>
               </nav>
             </div>
-            
+
             {/* Header Actions */}
             <div className="flex items-center gap-2 md:gap-4">
               {/* Quick Search */}
@@ -232,7 +262,7 @@ export default function EmployeeList() {
           {/* Scrollable Content Body */}
           <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6 lg:p-8 scroll-smooth">
             <div className="max-w-[1600px] mx-auto flex flex-col gap-6">
-              
+
               {/* Page Title & Action Buttons */}
               <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                 <div>
@@ -253,16 +283,26 @@ export default function EmployeeList() {
                     <span className="material-symbols-outlined text-[20px]">file_upload</span>
                     Export
                   </button>
-                  <button className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-[#137fec] hover:bg-primary-dark text-white px-4 py-2.5 rounded-lg text-sm font-bold shadow-lg shadow-blue-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]">
+                  <button
+                    onClick={() => setIsAddModalOpen(true)}
+                    className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-[#137fec] hover:bg-primary-dark text-white px-4 py-2.5 rounded-lg text-sm font-bold shadow-lg shadow-blue-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                  >
                     <span className="material-symbols-outlined text-[20px]">add</span>
                     Add New Employee
                   </button>
                 </div>
               </div>
 
+              {/* Add Modal */}
+              <AddEmployeeModal
+                isOpen={isAddModalOpen}
+                onClose={() => setIsAddModalOpen(false)}
+                onUserAdded={handleUserAdded}
+              />
+
               {/* Stats Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                
+
                 {/* Total Employees Card */}
                 <div className="bg-white p-5 rounded-xl border border-slate-200 border-l-4 border-l-[#137fec] shadow-sm hover:shadow-md transition-shadow">
                   <div className="flex items-center justify-between">
@@ -293,7 +333,7 @@ export default function EmployeeList() {
                     </div>
                   </div>
                 </div>
-                
+
                 {/* On Leave Card */}
                 <div className="bg-white p-5 rounded-xl border border-slate-200 border-l-4 border-l-orange-500 shadow-sm hover:shadow-md transition-shadow">
                   <div className="flex items-center justify-between">

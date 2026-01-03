@@ -8,7 +8,7 @@ export default function SuperLogin() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false); // Toggle state
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -26,72 +26,89 @@ export default function SuperLogin() {
         password,
       });
 
-      if (authError) {
-        throw new Error(authError.message);
-      }
-
-      if (!data.user) {
-        throw new Error("Login failed. Please try again.");
-      }
+      if (authError) throw new Error(authError.message);
+      if (!data.user) throw new Error("Login failed. Please try again.");
 
       /* ===============================
          2. VERIFY SUPER ADMIN ROLE
       =============================== */
+      // Correctly querying 'superadmins' table using 'auth_uid' to match the authenticated user
       const { data: superAdmin, error: roleError } = await supabase
         .from("superadmins")
-        .select("id")
+        .select("*")
         .eq("auth_uid", data.user.id)
         .single();
 
       if (roleError || !superAdmin) {
-        // If not in the superadmin table, kick them out immediately
+        // IMPORTANT: improved security - sign out immediately if they are not in the admin table
         await supabase.auth.signOut();
-        throw new Error("Access denied: You are not a Super Admin.");
+        throw new Error("Access denied: You are not authorized as a Super Admin.");
       }
 
       /* ===============================
-         3. SUCCESS → REDIRECT
+         3. UPDATE AUDIT & REDIRECT
       =============================== */
+      // Update last_login timestamp, ignoring errors if this simple update fails
+      const { error: updateError } = await supabase
+        .from("superadmins")
+        .update({ last_login: new Date().toISOString() })
+        .eq("id", superAdmin.id);
+
+      if (updateError) {
+        console.warn("Failed to update last_login:", updateError);
+      }
+
       navigate("/super/dashboard");
-      
+
     } catch (err) {
-      console.error("Super admin login error:", err);
-      setError(err.message || "Something went wrong.");
+      console.error("Admin login error:", err);
+      // Friendly error message mapping
+      let msg = err.message;
+      if (msg.includes("Invalid login credentials")) msg = "Invalid email or password.";
+      setError(msg);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-        
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4 font-sans">
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden transform transition-all hover:shadow-2xl">
+
         {/* Header Section */}
-        <div className="bg-blue-600 p-8 text-center">
-          <div className="mx-auto bg-white/20 w-16 h-16 rounded-full flex items-center justify-center mb-4 backdrop-blur-sm">
-            <ShieldCheck className="text-white w-8 h-8" />
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-8 text-center relative">
+          {/* Decorative circles */}
+          <div className="absolute top-0 left-0 w-24 h-24 bg-white/10 rounded-full -translate-x-12 -translate-y-12 blur-xl"></div>
+          <div className="absolute bottom-0 right-0 w-32 h-32 bg-white/10 rounded-full translate-x-12 translate-y-12 blur-xl"></div>
+
+          <div className="relative z-10 mx-auto bg-white/20 w-16 h-16 rounded-full flex items-center justify-center mb-4 backdrop-blur-sm border border-white/30 shadow-lg">
+            <ShieldCheck className="text-white w-9 h-9" />
           </div>
-          <h2 className="text-2xl font-bold text-white">Super Admin Portal</h2>
-          <p className="text-blue-100 mt-2 text-sm">Secure access for administrators</p>
+          <h2 className="relative z-10 text-2xl font-bold text-white tracking-tight">Super Admin Portal</h2>
+          <p className="relative z-10 text-blue-100 mt-2 text-sm font-medium">Secure access for administrators</p>
         </div>
 
         {/* Form Section */}
-        <div className="p-8">
-          <form onSubmit={handleSubmit} className="space-y-5">
-            
+        <div className="p-8 pt-10">
+          <form onSubmit={handleSubmit} className="space-y-6">
+
             {/* Error Message */}
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 text-sm p-3 rounded-lg flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
-                <span className="font-bold">Error:</span> {error}
+              <div className="bg-red-50 border-l-4 border-red-500 text-red-700 text-sm p-4 rounded-r shadow-sm flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
+                <span className="material-symbols-outlined text-red-500 text-[20px] shrink-0">error</span>
+                <div>
+                  <p className="font-bold text-xs uppercase tracking-wider mb-0.5">Authentication Error</p>
+                  <p>{error}</p>
+                </div>
               </div>
             )}
 
             {/* Email Field */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-400" />
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Email Address</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                  <Mail className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
                 </div>
                 <input
                   type="email"
@@ -99,32 +116,31 @@ export default function SuperLogin() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                  className="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-medium text-gray-700 bg-gray-50/50 focus:bg-white"
                 />
               </div>
             </div>
 
             {/* Password Field with Eye Toggle */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Password</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                  <Lock className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
                 </div>
                 <input
-                  type={showPassword ? "text" : "password"} // Dynamic type
+                  type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                  className="w-full pl-11 pr-12 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-medium text-gray-700 bg-gray-50/50 focus:bg-white"
                 />
-                
-                {/* The Eye Button */}
+
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors focus:outline-none"
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-blue-600 transition-colors focus:outline-none"
                 >
                   {showPassword ? (
                     <EyeOff className="h-5 w-5" />
@@ -139,17 +155,27 @@ export default function SuperLogin() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md transition-all disabled:opacity-70 disabled:cursor-not-allowed mt-2"
+              className="w-full relative overflow-hidden flex items-center justify-center py-3.5 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/30 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100 mt-4 group"
             >
-              {loading ? (
-                <>
-                  <Loader2 className="animate-spin h-5 w-5 mr-2" />
-                  Verifying...
-                </>
-              ) : (
-                "Sign In"
-              )}
+              <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+              <div className="relative flex items-center gap-2">
+                {loading ? (
+                  <>
+                    <Loader2 className="animate-spin h-5 w-5" />
+                    <span>Verifying Credentials...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Secure Login</span>
+                    <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+                  </>
+                )}
+              </div>
             </button>
+
+            <p className="text-center text-xs text-gray-400 mt-4">
+              Monitor. Manage. Optimize.
+            </p>
           </form>
         </div>
       </div>
